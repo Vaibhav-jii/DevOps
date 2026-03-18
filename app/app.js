@@ -26,10 +26,7 @@ app.get('/', (req, res) => {
 
 // health endpoint (used by Jenkins later)
 app.get('/health', (req, res) => {
-    if (!isHealthy) {
-        return res.status(500).send("FAIL");
-    }
-    res.status(200).send("OK");
+    res.status(500).send("FAIL");
 });
 
 // simulate failure
