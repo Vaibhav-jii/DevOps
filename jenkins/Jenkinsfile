@@ -1,0 +1,64 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "node-app"
+        CONTAINER_NAME = "myapp"
+    }
+
+    stages {
+
+        stage('Build Image') {
+            steps {
+                sh 'docker build -t node-app:latest -f docker/Dockerfile .'
+            }
+        }
+
+        stage('Tag Version') {
+            steps {
+                sh 'docker tag node-app:latest node-app:v1.01 || true'
+            }
+        }
+
+        stage('Backup Previous') {
+            steps {
+                sh 'docker tag node-app:latest node-app:backup || true'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh '''
+                docker stop myapp || true
+                docker rm myapp || true
+                docker run -d -p 3000:3000 --name myapp node-app:latest
+                '''
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                sh '''
+                sleep 5
+                curl -f http://localhost:3000/health
+                '''
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo "❌ Deployment failed! Rolling back..."
+
+            sh '''
+            docker stop myapp || true
+            docker rm myapp || true
+            docker run -d -p 3000:3000 --name myapp node-app:backup
+            '''
+        }
+
+        success {
+            echo "✅ Deployment successful!"
+        }
+    }
+}
