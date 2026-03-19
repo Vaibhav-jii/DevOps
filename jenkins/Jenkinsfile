@@ -14,18 +14,6 @@ pipeline {
             }
         }
 
-        stage('Tag Version') {
-            steps {
-                sh 'docker tag node-app:latest node-app:v1.01 || true'
-            }
-        }
-
-        stage('Backup Previous') {
-            steps {
-                sh 'docker tag node-app:latest node-app:backup || true'
-            }
-        }
-
         stage('Deploy') {
             steps {
                 sh '''
@@ -47,18 +35,21 @@ pipeline {
     }
 
     post {
+        success {
+            sh 'docker tag node-app:latest node-app:stable'
+            echo "✅ Deployment successful! Image tagged as node-app:stable"
+        }
+
         failure {
-            echo "❌ Deployment failed! Rolling back..."
+            echo "❌ Deployment failed! Rolling back to stable version..."
 
             sh '''
             docker stop myapp || true
             docker rm myapp || true
-            docker run -d -p 3000:3000 --name myapp node-app:backup
+            docker run -d -p 3000:3000 --name myapp node-app:stable
             '''
-        }
 
-        success {
-            echo "✅ Deployment successful!"
+            echo "✅ Rollback complete! App restored to last stable version."
         }
     }
 }
